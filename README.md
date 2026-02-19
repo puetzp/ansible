@@ -14,7 +14,7 @@ The roles in this collection predefine only a few variables that are needed to c
 Example
 -------
 
-The [sshd](debian/roles/sshd) offers only a few variables, most notably:
+The [sshd](debian/roles/sshd) role offers only a few variables, most notably:
 
 - `sshd_config`
 - `sshd_config_d`
