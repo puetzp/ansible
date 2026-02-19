@@ -1,0 +1,16 @@
+---
+- name: Create /etc/systemd/resolved.conf
+  ansible.builtin.copy:
+    content: "{{ systemd_resolved }}"
+    dest: /etc/systemd/resolved.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart systemd-resolved
+
+- name: Ensure /etc/resolv.conf is a link
+  ansible.builtin.file:
+    src: /run/systemd/resolve/stub-resolv.conf
+    dest: /etc/resolv.conf
+    state: link

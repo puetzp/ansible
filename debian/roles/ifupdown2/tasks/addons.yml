@@ -1,0 +1,11 @@
+---
+- name: Create /etc/network/ifupdown2/addons.conf
+  ansible.builtin.copy:
+    content: "{{ ifupdown2_addons }}"
+    dest: /etc/network/ifupdown2/addons.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Validate interface config
+    - Restart networking

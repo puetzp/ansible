@@ -1,0 +1,35 @@
+---
+- name: Define variable
+  ansible.builtin.set_fact:
+    _apt_sources: {}
+
+- name: Define apt source files
+  ansible.builtin.set_fact:
+    _apt_sources: "{{ _apt_sources | combine({ '/etc/apt/sources.list.d/' ~ item.key: item.value }) }}"
+  loop: "{{ apt_sources | dict2items }}"
+
+- name: Find existing apt source files
+  ansible.builtin.find:
+    paths: /etc/apt/sources.list.d
+  register: files
+
+- name: Remove unwanted apt source files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _apt_sources
+  loop: "{{ files.files }}"
+
+- name: Remove default apt source file
+  ansible.builtin.file:
+    path: /etc/apt/sources.list
+    state: absent
+
+- name: Create apt source files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ _apt_sources | dict2items }}"

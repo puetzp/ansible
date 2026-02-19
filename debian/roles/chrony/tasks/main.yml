@@ -1,0 +1,34 @@
+---
+- name: Install chrony
+  ansible.builtin.apt:
+    name: chrony
+    state: present
+    install_recommends: false
+    update_cache: true
+
+- name: Include tasks to configure chrony
+  ansible.builtin.include_tasks: conf.yml
+  when: chrony_conf is defined
+
+- name: Include tasks to configure chrony configuration fragments
+  ansible.builtin.include_tasks: conf_d.yml
+  when: chrony_conf_d is defined
+
+- name: Include tasks to configure chrony sources
+  ansible.builtin.include_tasks: sources_d.yml
+  when: chrony_sources_d is defined
+
+- name: Include tasks to configure chrony keys
+  ansible.builtin.include_tasks: keys.yml
+  when: chrony_keys is defined
+
+- name: Include tasks to configure chrony defaults
+  ansible.builtin.include_tasks: defaults.yml
+  when: chrony_defaults is defined
+
+- name: Include tasks to override chrony systemd unit settings
+  ansible.builtin.include_tasks: systemd_override.yml
+  when: chrony_systemd_override is defined
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

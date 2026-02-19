@@ -1,0 +1,11 @@
+---
+- name: Create /etc/chrony/chrony.keys
+  ansible.builtin.copy:
+    content: "{{ chrony_keys }}"
+    dest: /etc/chrony/chrony.keys
+    owner: root
+    group: root
+    mode: '0640'
+  notify:
+    - Validate chrony config
+    - Restart chrony

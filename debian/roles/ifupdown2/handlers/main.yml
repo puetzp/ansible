@@ -1,0 +1,17 @@
+---
+- name: Validate interface config
+  ansible.builtin.command:
+    cmd: ifreload --all --syntax-check
+
+- name: Reload interface config
+  ansible.builtin.command:
+    cmd: ifreload --all
+
+- name: Restart networking
+  ansible.builtin.systemd_service:
+    name: networking
+    enabled: true
+    state: restarted
+    daemon_reload: true
+
+

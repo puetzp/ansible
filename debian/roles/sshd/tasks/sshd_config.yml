@@ -1,0 +1,11 @@
+---
+- name: Create /etc/ssh/sshd_config
+  ansible.builtin.copy:
+    content: "{{ sshd_config }}"
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0600'
+  notify:
+    - Validate sshd config
+    - Restart sshd

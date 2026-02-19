@@ -1,0 +1,11 @@
+---
+- name: Create /etc/default/networking
+  ansible.builtin.copy:
+    content: "{{ ifupdown2_defaults }}"
+    dest: /etc/default/networking
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Validate interface config
+    - Restart networking

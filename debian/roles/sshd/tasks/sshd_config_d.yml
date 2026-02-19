@@ -1,0 +1,44 @@
+---
+- name: Create /etc/ssh/sshd_config.d
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _sshd_config_d: {}
+
+- name: Define sshd configuration files
+  ansible.builtin.set_fact:
+    _sshd_config_d: "{{ _sshd_config_d | default({}) | combine({ '/etc/ssh/sshd_config.d/' ~ item.key: item.value }) }}"
+  loop: "{{ sshd_config_d | dict2items }}"
+
+- name: Find existing sshd configuration files
+  ansible.builtin.find:
+    paths: /etc/ssh/sshd_config.d
+  register: files
+
+- name: Remove unwanted sshd configuration files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _sshd_config_d
+  loop: "{{ files.files }}"
+  notify:
+    - Validate sshd config
+    - Restart sshd
+  
+- name: Create sshd configuration files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0600'
+  loop: "{{ _sshd_config_d | dict2items }}"
+  notify:
+    - Validate sshd config
+    - Restart sshd

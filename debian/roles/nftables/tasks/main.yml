@@ -1,0 +1,26 @@
+---
+- name: Remove other firewalls
+  ansible.builtin.apt:
+    name:
+      - iptables
+      - ufw
+    state: absent
+    purge: true
+
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+    install_recommends: false
+    update_cache: true
+
+- name: Include tasks to configure nftables
+  ansible.builtin.include_tasks: conf.yml
+  when: nftables_conf is defined
+
+- name: Include tasks to configure nftables configuration fragments
+  ansible.builtin.include_tasks: conf_d.yml
+  when: nftables_conf_d is defined
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

@@ -1,0 +1,44 @@
+---
+- name: Create /etc/nftables.d
+  ansible.builtin.file:
+    path: /etc/nftables.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _nftables_conf_d: {}
+
+- name: Define nftables rule files
+  ansible.builtin.set_fact:
+    _nftables_conf_d: "{{ _nftables_conf_d | combine({ '/etc/nftables.d/' ~ item.key: item.value }) }}"
+  loop: "{{ nftables_conf_d | dict2items }}"
+
+- name: Find existing nftables rule files
+  ansible.builtin.find:
+    paths: /etc/nftables.d
+  register: files
+
+- name: Remove unwanted nftables rule files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _nftables_conf_d
+  loop: "{{ files.files }}"
+  notify:
+    - Validate nftables config
+    - Restart nftables
+  
+- name: Create nftables rule files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ _nftables_conf_d | dict2items }}"
+  notify:
+    - Validate nftables config
+    - Restart nftables

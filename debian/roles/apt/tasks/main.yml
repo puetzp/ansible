@@ -1,0 +1,8 @@
+---
+- name: Include tasks to configure apt sources
+  ansible.builtin.include_tasks: sources.yml
+  when: apt_sources is defined
+
+- name: Include tasks to configure apt keyrings
+  ansible.builtin.include_tasks: keyrings.yml
+  when: apt_keyrings is defined

@@ -1,0 +1,56 @@
+---
+
+- name: Create /etc/network/interfaces
+  ansible.builtin.copy:
+    content: "source /etc/network/interfaces.d/*\n"
+    dest: /etc/network/interfaces
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Validate interface config
+    - Reload interface config
+
+- name: Create /etc/network/interfaces.d
+  ansible.builtin.file:
+    path: /etc/network/interfaces.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _ifupdown2_interfaces: { '/etc/network/interfaces.d/lo': 'auto lo\niface lo inet loopback\n' }
+
+- name: Define interface files
+  ansible.builtin.set_fact:
+    _ifupdown2_interfaces: "{{ _ifupdown2_interfaces | combine({ '/etc/network/interfaces.d/' ~ item.key: item.value }) }}"
+  loop: "{{ ifupdown2_interfaces | dict2items }}"
+
+- name: Find existing interface files
+  ansible.builtin.find:
+    paths: /etc/network/interfaces.d
+  register: files
+
+- name: Remove unwanted interface files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _ifupdown2_interfaces
+  loop: "{{ files.files }}"
+  notify:
+    - Validate interface config
+    - Reload interface config
+
+- name: Create interface files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ _ifupdown2_interfaces | dict2items }}"
+  notify:
+    - Validate interface config
+    - Reload interface config

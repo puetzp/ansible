@@ -1,0 +1,10 @@
+---
+- name: Create /etc/default/chrony
+  ansible.builtin.copy:
+    content: "{{ chrony_defaults }}"
+    dest: /etc/default/chrony
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart chrony

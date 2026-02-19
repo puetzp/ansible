@@ -1,0 +1,10 @@
+---
+- name: Create /etc/default/prometheus
+  ansible.builtin.copy:
+    content: "{{ prometheus_defaults }}"
+    dest: /etc/default/prometheus
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart prometheus

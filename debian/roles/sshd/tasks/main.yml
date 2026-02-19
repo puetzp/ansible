@@ -1,0 +1,16 @@
+---
+- name: Include tasks to configure sshd
+  ansible.builtin.include_tasks: sshd_config.yml
+  when: sshd_config is defined
+
+- name: Include tasks to configure sshd configuration fragments
+  ansible.builtin.include_tasks: sshd_config_d.yml
+  when: sshd_config_d is defined
+
+- name: Include tasks to override sshd systemd unit settings
+  ansible.builtin.include_tasks: systemd_override.yml
+  when: sshd_systemd_override is defined
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+

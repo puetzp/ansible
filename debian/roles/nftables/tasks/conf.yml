@@ -1,0 +1,12 @@
+---
+- name: Create /etc/nftables.conf
+  ansible.builtin.copy:
+    content: "{{ nftables_conf }}"
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Validate nftables config
+    - Restart nftables
+

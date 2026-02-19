@@ -1,0 +1,31 @@
+---
+- name: Define variable
+  ansible.builtin.set_fact:
+    _apt_keyrings: {}
+
+- name: Define gpg keyrings for apt
+  ansible.builtin.set_fact:
+    _apt_keyrings: "{{ _apt_keyrings | combine({ '/etc/apt/keyrings/' ~ item.key: item.value }) }}"
+  loop: "{{ apt_keyrings | dict2items }}"
+
+- name: Find existing gpg keyrings for apt
+  ansible.builtin.find:
+    paths: /etc/apt/keyrings
+  register: files
+
+- name: Remove unwanted gpg keyrings for apt
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _apt_keyrings
+  loop: "{{ files.files }}"
+
+- name: Create gpg keyrings for apt
+  ansible.builtin.copy:
+    src: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ _apt_keyrings | dict2items }}"
+

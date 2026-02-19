@@ -1,0 +1,44 @@
+---
+- name: Create /etc/chrony/conf.d
+  ansible.builtin.file:
+    path: /etc/chrony/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _chrony_conf_d: {}
+
+- name: Define chrony configuration files
+  ansible.builtin.set_fact:
+    _chrony_conf_d: "{{ _chrony_conf_d | combine({ '/etc/chrony/conf.d/' ~ item.key: item.value }) }}"
+  loop: "{{ chrony_conf_d | dict2items }}"
+
+- name: Find existing chrony configuration files
+  ansible.builtin.find:
+    paths: /etc/chrony/conf.d
+  register: files
+
+- name: Remove unwanted chrony configuration files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _chrony_conf_d
+  loop: "{{ files.files }}"
+  notify:
+    - Validate chrony config
+    - Restart chrony
+  
+- name: Create chrony configuration files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ _chrony_conf_d | dict2items }}"
+  notify:
+    - Validate chrony config
+    - Restart chrony

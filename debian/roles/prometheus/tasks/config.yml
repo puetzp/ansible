@@ -1,0 +1,12 @@
+---
+- name: Create /etc/prometheus/prometheus.yml
+  ansible.builtin.copy:
+    content: "{{ prometheus_config }}"
+    dest: /etc/prometheus/prometheus.yml
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+    validate: promtool check config %s
+  notify:
+    - Reload prometheus
+

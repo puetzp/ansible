@@ -1,0 +1,43 @@
+---
+- name: Create /etc/prometheus/scrape.d
+  ansible.builtin.file:
+    path: /etc/prometheus/scrape.d
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _prometheus_scrape_d: {}
+
+- name: Define prometheus scrape config files
+  ansible.builtin.set_fact:
+    _prometheus_scrape_d: "{{ _prometheus_scrape_d | combine({ '/etc/prometheus/scrape.d/' ~ item.key: item.value }) }}"
+  loop: "{{ prometheus_scrape_d | dict2items }}"
+
+- name: Find existing prometheus scrape config files
+  ansible.builtin.find:
+    paths: /etc/prometheus/scrape.d
+  register: files
+
+- name: Remove unwanted prometheus scrape config files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _prometheus_scrape_d
+  loop: "{{ files.files }}"
+  notify:
+    - Reload prometheus
+  
+- name: Create prometheus scrape config files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+    validate: promtool check config %s
+  loop: "{{ _prometheus_scrape_d | dict2items }}"
+  notify:
+    - Reload prometheus

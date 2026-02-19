@@ -1,0 +1,27 @@
+---
+- name: Install prometheus
+  ansible.builtin.apt:
+    name: prometheus
+    state: present
+    install_recommends: false
+    update_cache: true
+
+- name: Include tasks to configure prometheus
+  ansible.builtin.include_tasks: config.yml
+  when: prometheus_config is defined
+
+- name: Include tasks to configure prometheus rule files
+  ansible.builtin.include_tasks: rule_d.yml
+  when: prometheus_rule_d is defined
+
+- name: Include tasks to configure prometheus scrape config files
+  ansible.builtin.include_tasks: scrape_d.yml
+  when: prometheus_scrape_d is defined
+
+- name: Include tasks to configure prometheus defaults
+  ansible.builtin.include_tasks: defaults.yml
+  when: prometheus_defaults is defined
+
+- name: Include tasks to override prometheus systemd unit settings
+  ansible.builtin.include_tasks: systemd_override.yml
+  when: prometheus_systemd_override is defined

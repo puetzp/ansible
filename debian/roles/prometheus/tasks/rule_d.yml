@@ -1,0 +1,43 @@
+---
+- name: Create /etc/prometheus/rules.d
+  ansible.builtin.file:
+    path: /etc/prometheus/rules.d
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _prometheus_rule_d: {}
+
+- name: Define prometheus rule files
+  ansible.builtin.set_fact:
+    _prometheus_rule_d: "{{ _prometheus_rule_d | combine({ '/etc/prometheus/rules.d/' ~ item.key: item.value }) }}"
+  loop: "{{ prometheus_rule_d | dict2items }}"
+
+- name: Find existing prometheus rule files
+  ansible.builtin.find:
+    paths: /etc/prometheus/rules.d
+  register: files
+
+- name: Remove unwanted prometheus rule files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _prometheus_rule_d
+  loop: "{{ files.files }}"
+  notify:
+    - Reload prometheus
+  
+- name: Create prometheus rule files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+    validate: promtool check rules %s
+  loop: "{{ _prometheus_rule_d | dict2items }}"
+  notify:
+    - Reload prometheus

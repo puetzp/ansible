@@ -1,0 +1,36 @@
+---
+- name: Install ifupdown2
+  ansible.builtin.apt:
+    name: ifupdown2
+    state: present
+    install_recommends: false
+    update_cache: true
+
+# Even though the networking default settings apply to
+# a whole range of networking backends the role name is
+# used as variable prefix for consistency.
+- name: Include tasks to configure networking defaults
+  ansible.builtin.include_tasks: defaults.yml
+  when: ifupdown2_defaults is defined
+
+- name: Include tasks to configure ifupdown2
+  ansible.builtin.include_tasks: config.yml
+  when: ifupdown2_config is defined
+
+- name: Include tasks to configure ifupdown2 addons
+  ansible.builtin.include_tasks: addons.yml
+  when: ifupdown2_addons is defined
+
+# Even though the interfaces configuration syntax does in
+# fact not originate from ifupdown2 the role name is used
+# as prefix for consistency.
+- name: Include tasks to configure interfaces
+  ansible.builtin.include_tasks: interfaces.yml
+  when: ifupdown2_interfaces is defined
+
+- name: Include tasks to override ifupdown2 systemd unit settings
+  ansible.builtin.include_tasks: systemd_override.yml
+  when: ifupdown2_systemd_override is defined
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

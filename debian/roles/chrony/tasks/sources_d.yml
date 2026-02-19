@@ -1,0 +1,44 @@
+---
+- name: Create /etc/chrony/sources.d
+  ansible.builtin.file:
+    path: /etc/chrony/sources.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _chrony_sources_d: {}
+
+- name: Define chrony source files
+  ansible.builtin.set_fact:
+    _chrony_sources_d: "{{ _chrony_sources_d | default({}) | combine({ '/etc/chrony/sources.d/' ~ item.key: item.value }) }}"
+  loop: "{{ chrony_sources_d | dict2items }}"
+
+- name: Find existing chrony source files
+  ansible.builtin.find:
+    paths: /etc/chrony/sources.d
+  register: files
+
+- name: Remove unwanted chrony source files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _chrony_sources_d
+  loop: "{{ files.files }}"
+  notify:
+    - Validate chrony config
+    - Restart chrony
+  
+- name: Create chrony source files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ _chrony_sources_d | dict2items }}"
+  notify:
+    - Validate chrony config
+    - Restart chrony

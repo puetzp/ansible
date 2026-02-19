@@ -1,0 +1,11 @@
+---
+- name: Create /etc/chrony/chrony.conf
+  ansible.builtin.copy:
+    content: "{{ chrony_conf }}"
+    dest: /etc/chrony/chrony.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Validate chrony config
+    - Restart chrony

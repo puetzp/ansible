@@ -1,0 +1,5 @@
+---
+- name: Include tasks to configure /etc/hosts
+  ansible.builtin.import_tasks: hosts.yml
+  when: hosts is defined
+
