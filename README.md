@@ -45,7 +45,7 @@ sshd_config: "{{ lookup('ansible.builtin.file', 'files/etc/ssh/sshd_config') }}"
 sshd_config_d:
   ansible.conf: |
     Match User ansible
-	  AuthenticationMethods publickey
+      AuthenticationMethods publickey
 ```
 
 ```yml
