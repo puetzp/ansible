@@ -40,3 +40,10 @@ systemd_resolved: |
   LLMNR=false
 
 ```
+
+
+Links
+-----
+
+- [systemd-resolved(8)](https://manpages.debian.org/latest/systemd-resolved/systemd-resolved.8.en.html)
+- [resolved.conf(5)](https://manpages.debian.org/latest/systemd-resolved/resolved.conf.5.en.html)
