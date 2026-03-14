@@ -74,3 +74,13 @@ source /etc/network/interfaces.d/*
 Also the loopback interface (`/etc/network/interfaces.d/lo`) is silently added to the list of interfaces and will always be created, even when the `ifupdown2_interfaces` mapping is intentionally left empty.
 
 Also note that some aspects of this role, such as the `networking` systemd service unit are not unique to `ifupdown2`. Still `ifupdown2` is always used as variable prefix to ensure consistency in the naming scheme.
+
+Links
+-----
+
+- [interfaces(5)](https://manpages.debian.org/latest/ifupdown2/interfaces.5.en.html)
+- [ifdown(8)](https://manpages.debian.org/latest/ifupdown2/ifdown.8.en.html)
+- [ifquery(8)](https://manpages.debian.org/latest/ifupdown2/ifquery.8.en.html)
+- [ifreload(8)](https://manpages.debian.org/latest/ifupdown2/ifreload.8.en.html)
+- [ifup(8)](https://manpages.debian.org/latest/ifupdown2/ifup.8.en.html)
+- [ifupdown-addons-interfaces(5)](https://manpages.debian.org/latest/ifupdown2/ifupdown-addons-interfaces.5.en.html)
