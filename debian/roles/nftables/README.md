@@ -78,3 +78,9 @@ nftables_conf_d:
 # Or explicitly remove unknown rule files.
 nftables_conf_d: {}
 ```
+
+Links
+-----
+
+- [nftables(8)](https://manpages.debian.org/latest/nftables/nftables.8.en.html)
+- [nft(8)](https://manpages.debian.org/latest/nftables/nft.8.en.html)
