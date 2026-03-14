@@ -1,5 +1,5 @@
-Role Name
-=========
+hosts
+=====
 
 This role configures `/etc/hosts` on Debian servers.
 
@@ -40,3 +40,8 @@ hosts: |
   {{ ansible_host }} {{ inventory_hostname }} {{ inventory_hostname_short }}
 
 ```
+
+Links
+-----
+
+- [hosts(5)](https://manpages.debian.org/latest/manpages/hosts.5.en.html)
