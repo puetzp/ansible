@@ -56,3 +56,8 @@ apt_keyrings:
   debian-archive-trixie-security-automatic.gpg: /usr/share/keyrings/debian-archive-trixie-security-automatic.gpg
 
 ```
+
+Links
+-----
+
+- [sources.list(5)](https://manpages.debian.org/latest/apt/sources.list.5.en.html)
