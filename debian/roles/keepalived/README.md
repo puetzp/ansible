@@ -166,3 +166,9 @@ keepalived_conf: |
   }
 
 ```
+
+Links
+-----
+
+- [keepalived(8)](https://manpages.debian.org/latest/keepalived/keepalived.8.en.html)
+- [keepalived.conf(5)](https://manpages.debian.org/latest/keepalived/keepalived.conf.5.en.html)
