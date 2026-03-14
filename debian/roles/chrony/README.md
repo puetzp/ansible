@@ -62,3 +62,10 @@ chrony_defaults: |
   DAEMON_OPTS="-F 1 -4"
 
 ```
+
+Links
+-----
+
+- [chronyd(8)](https://manpages.debian.org/latest/chrony/chronyd.8.en.html)
+- [chronyc(1)](https://manpages.debian.org/latest/chrony/chronyc.1.en.html)
+- [chrony.conf(5)](https://manpages.debian.org/latest/chrony/chrony.conf.5.en.html)
