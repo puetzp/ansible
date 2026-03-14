@@ -133,7 +133,7 @@ keepalived_conf: |
 ```
 
 ```yml
-# host_vars/test-2.internal.yml
+# host_vars/test-3.internal.yml
 ---
 
 keepalived_conf: |
