@@ -66,3 +66,9 @@ Caveats
 Since Prometheus configuration files are written in YAML (or optionally JSON) it would make sense to write the values from `prometheus_rule_d` and `prometheus_scrape_d` to a file using the `to_yaml` filter. However the values in these mappings might be static file lookups (see the example above). Since the result of these lookups is a string, the `to_yaml` filter behaves not as expected and writes the result as a single quoted YAML scalar.
 
 This is avoided by having all variables defined as (multi-line) strings, write it as-is to the destination file and leave it to `promtool` to validate the YAML syntax and configuration parameters inside.
+
+Links
+-----
+
+- [prometheus(1)](https://manpages.debian.org/latest/prometheus/prometheus.1.en.html)
+- [configuration](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
