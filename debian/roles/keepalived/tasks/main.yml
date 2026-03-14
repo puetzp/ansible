@@ -1,0 +1,26 @@
+---
+- name: Install keepalived
+  ansible.builtin.apt:
+    name: keepalived
+    state: present
+    install_recommends: false
+    update_cache: true
+
+- name: Include tasks to configure keepalived
+  ansible.builtin.include_tasks: conf.yml
+  when: keepalived_conf is defined
+
+- name: Include tasks to configure keepalived configuration fragments
+  ansible.builtin.include_tasks: conf_d.yml
+  when: keepalived_conf_d is defined
+
+- name: Include tasks to configure keepalived defaults
+  ansible.builtin.include_tasks: defaults.yml
+  when: keepalived_defaults is defined
+
+- name: Include tasks to override keepalived systemd unit settings
+  ansible.builtin.include_tasks: systemd_override.yml
+  when: keepalived_systemd_override is defined
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

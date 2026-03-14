@@ -1,4 +1,4 @@
-Role Name
+systemd_resolved
 =========
 
 This role configures `systemd-resolved` as a stub resolver on Debian servers. The package `systemd-resolved` is installed if necessary. It also ensures that `/etc/resolv.conf` is a symlink pointing to `/run/systemd/resolve/stub-resolv.conf`.

@@ -1,4 +1,4 @@
-Role Name
+nftables
 =========
 
 This role configures `nftables` on Debian servers. The package `nftables` is installed if necessary and conflicting packages are removed.

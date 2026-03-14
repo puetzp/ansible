@@ -1,0 +1,10 @@
+---
+- name: Create /etc/default/keepalived
+  ansible.builtin.copy:
+    content: "{{ keepalived_defaults }}"
+    dest: /etc/default/keepalived
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart keepalived

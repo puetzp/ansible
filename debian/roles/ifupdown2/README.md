@@ -1,4 +1,4 @@
-Role Name
+ifupdown2
 =========
 
 This role configures `ifupdown2` for networking on Debian servers. The package `ifupdown2` is installed if necessary and conflicting packages are removed.

@@ -1,0 +1,44 @@
+---
+- name: Create /etc/keepalived/conf.d
+  ansible.builtin.file:
+    path: /etc/keepalived/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _keepalived_conf_d: {}
+
+- name: Define keepalived configuration files
+  ansible.builtin.set_fact:
+    _keepalived_conf_d: "{{ _keepalived_conf_d | combine({ '/etc/keepalived/conf.d/' ~ item.key: item.value }) }}"
+  loop: "{{ keepalived_conf_d | dict2items }}"
+
+- name: Find existing keepalived configuration files
+  ansible.builtin.find:
+    paths: /etc/keepalived/conf.d
+  register: files
+
+- name: Remove unwanted keepalived configuration files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _keepalived_conf_d
+  loop: "{{ files.files }}"
+  notify:
+    - Validate keepalived config
+    - Restart keepalived
+  
+- name: Create keepalived configuration files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ _keepalived_conf_d | dict2items }}"
+  notify:
+    - Validate keepalived config
+    - Restart keepalived

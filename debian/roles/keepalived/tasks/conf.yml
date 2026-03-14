@@ -1,0 +1,11 @@
+---
+- name: Create /etc/keepalived/keepalived.conf
+  ansible.builtin.copy:
+    content: "{{ keepalived_conf }}"
+    dest: /etc/keepalived/keepalived.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Validate keepalived config
+    - Restart keepalived

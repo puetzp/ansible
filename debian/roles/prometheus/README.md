@@ -1,4 +1,4 @@
-Role Name
+prometheus
 =========
 
 This role configures `prometheus` on Debian servers. The package `prometheus` is installed if necessary.

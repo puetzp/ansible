@@ -1,4 +1,4 @@
-Role Name
+chrony
 =========
 
 This role configures `chrony` on Debian servers. The package `chrony` is installed if necessary.

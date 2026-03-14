@@ -1,4 +1,4 @@
-Role Name
+sshd
 =========
 
 This role configures `sshd` on Debian servers.
