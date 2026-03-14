@@ -89,3 +89,10 @@ sshd_config: |
 # files from the directory.
 sshd_config_d: {}
 ```
+
+Links
+-----
+
+- [sshd(8)](https://manpages.debian.org/latest/openssh-server/sshd.8.en.html)
+- [sshd_config(5)](https://manpages.debian.org/latest/openssh-server/sshd_config.5.en.html)
+- [authorized_keys(5)](https://manpages.debian.org/latest/openssh-server/authorized_keys.5.en.html)
