@@ -17,6 +17,7 @@ Role Variables
 
 - `apache2_conf`: String. If present, the contents of this variable are copied to `/etc/apache2/apache2.conf`. If absent, the current file is not modified.
 - `apache2_ports`: String. If present, the contents of this variable are copied to `/etc/apache2/ports.conf`. If absent, the current file is not modified.
+- `apache2_envvars`: String. If present, the contents of this variable are copied to `/etc/apache2/envvars`. If absent, the current file is not modified.
 - `apache2_conf_available`: Mapping. If present, each key in this mapping is used as a file name to create a file in `/etc/apache2/conf-available` while the value is used as file content. Existing files are left unmodified. If absent, the directory is not modified.
 - `apache2_conf_enabled`: List. If present, every item from this list is used to create a symlink in `/etc/apache2/conf-enabled` pointing to the corresponding file in `/etc/apache2/conf-available`. Unknown symlinks and files are removed from the directory. If absent, the directory is not modified.
 - `apache2_mods_available`: Mapping. If present, each key in this mapping is used as a file name to create a file in `/etc/apache2/mods-available` while the value is used as file content. Existing files are left unmodified. If absent, the directory is not modified.
@@ -47,6 +48,8 @@ Example variables
 # host_vars/mirror.internal.yml
 
 apache2_conf: "{{ lookup('file', 'etc/apache2/apache2.conf', rstrip = false) }}"
+
+apache2_envvars: "{{ lookup('file', 'etc/apache2/envvars', rstrip = false) }}"
 
 apache2_ports: |
   Listen {{ ansible_host }}:80
