@@ -1,0 +1,54 @@
+---
+- name: Create /etc/apache2/sites-enabled
+  ansible.builtin.file:
+    path: /etc/apache2/sites-enabled
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _apache2_sites_enabled: {}
+
+- name: Define symlinks to apache2 configuration snippets
+  ansible.builtin.set_fact:
+    _apache2_sites_enabled: "{{ _apache2_sites_enabled | combine({ '/etc/apache2/sites-enabled/' ~ item: '../sites-available/' ~ item }) }}"
+  loop: "{{ apache2_sites_enabled }}"
+
+- name: Find existing symlinks to apache2 configuration snippets
+  ansible.builtin.find:
+    paths: /etc/apache2/sites-enabled
+    file_type: link
+  register: symlinks
+
+- name: Remove unwanted symlinks to apache2 configuration snippets
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _apache2_sites_enabled
+  loop: "{{ symlinks.files }}"
+  notify:
+    - Restart apache2
+  
+- name: Find files in /etc/apache2/sites-enabled
+  ansible.builtin.find:
+    paths: /etc/apache2/sites-enabled
+  register: files
+
+- name: Remove files from /etc/apache2/sites-enabled
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ files.files }}"
+  notify:
+    - Restart apache2
+  
+- name: Create symlinks to apache2 configuration snippets
+  ansible.builtin.file:
+    src: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    state: link
+  loop: "{{ _apache2_sites_enabled | dict2items }}"
+  notify:
+    - Restart apache2
