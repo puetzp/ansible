@@ -81,6 +81,12 @@ apache2_mods_enabled:
   - status.conf
   - status.load
 
+apache2_conf_available:
+  security.conf: |
+    ServerTokens ProductOnly
+    TraceEnable off
+    ServerSignature off
+
 apache2_conf_enabled:
   - security.conf
 
