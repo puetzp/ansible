@@ -37,6 +37,14 @@ Example Playbook
 ```yml
 - hosts: servers
   gather_facts: false
+  tasks:
+    - name: Create directory /etc/apache2/tls
+      ansible.builtin.file:
+        path: /etc/apache2/tls
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
   roles:
     - ansible.debian.apache2
 ```
@@ -53,6 +61,26 @@ apache2_envvars: "{{ lookup('file', 'etc/apache2/envvars', rstrip = false) }}"
 
 apache2_ports: |
   Listen {{ ansible_host }}:80
+  Listen {{ ansible_host }}:443
+
+apache2_mods_available:
+  ssl.conf: |
+    SSLRandomSeed startup builtin
+    SSLRandomSeed startup file:/dev/urandom 512
+    SSLRandomSeed connect builtin
+    SSLRandomSeed connect file:/dev/urandom 512
+
+    AddType application/x-x509-ca-cert .crt
+    AddType application/x-pkcs7-crl .crl
+
+    SSLSessionCache     shmcb:${APACHE_RUN_DIR}/ssl_scache(512000)
+    SSLSessionCacheTimeout  300
+
+    SSLCipherSuite HIGH:!aNULL
+    SSLHonorCipherOrder on
+    SSLProtocol TLSv1.3
+    SSLStrictSNIVHostCheck On
+    SSLSessionTickets off
 
 apache2_mods_enabled:
   - access_compat.load
@@ -78,6 +106,9 @@ apache2_mods_enabled:
   - reqtimeout.load
   - setenvif.conf
   - setenvif.load
+  - socache_shmcb.load
+  - ssl.conf
+  - ssl.load
   - status.conf
   - status.load
 
@@ -93,17 +124,35 @@ apache2_conf_enabled:
 apache2_sites_available:
   mirror.conf: |
     <VirtualHost *:80>
-      ServerName www.example.com
+      ServerName mirror.internal
 
       DocumentRoot /var/www/mirror
 
       ErrorLog ${APACHE_LOG_DIR}/error.log
       CustomLog ${APACHE_LOG_DIR}/access.log combined
     </VirtualHost>
+  mirror-ssl.conf: |
+    <VirtualHost *:443>
+      ServerName mirror.internal
 
+      DocumentRoot /var/www/mirror
+
+      ErrorLog ${APACHE_LOG_DIR}/error.log
+      CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+      SSLEngine on
+      SSLCertificateFile      /etc/apache2/tls/server.crt
+      SSLCertificateKeyFile   /etc/apache2/tls/server.key
+    </VirtualHost>
 
 apache2_sites_enabled:
   - mirror.conf
+  - mirror-ssl.conf
+
+apache2_systemd_override: |
+  [Unit]
+  ConditionPathExists=/etc/apache2/tls/server.crt
+  ConditionPathExists=/etc/apache2/tls/server.key
 ```
 
 Links
