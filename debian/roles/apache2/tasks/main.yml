@@ -1,0 +1,50 @@
+---
+- name: Install apache2
+  ansible.builtin.apt:
+    name: apache2
+    state: present
+    install_recommends: false
+    update_cache: true
+
+- name: Include tasks to manage apache2 configuration
+  ansible.builtin.include_tasks: conf.yml
+  when: apache2_conf is defined
+
+- name: Include tasks to manage apache2 module configurations
+  ansible.builtin.include_tasks: mods_available.yml
+  when: apache2_mods_available is defined
+
+- name: Include tasks to enable apache2 module configurations
+  ansible.builtin.include_tasks: mods_enabled.yml
+  when: apache2_mods_enabled is defined
+
+- name: Include tasks to manage apache2 configuration snippets
+  ansible.builtin.include_tasks: conf_available.yml
+  when: apache2_conf_available is defined
+
+- name: Include tasks to enable apache2 configuration snippets
+  ansible.builtin.include_tasks: conf_enabled.yml
+  when: apache2_conf_enabled is defined
+
+- name: Include tasks to manage apache2 site configurations
+  ansible.builtin.include_tasks: sites_available.yml
+  when: apache2_sites_available is defined
+
+- name: Include tasks to enable apache2 site configurations
+  ansible.builtin.include_tasks: sites_enabled.yml
+  when: apache2_sites_enabled is defined
+
+- name: Include tasks to manage apache2 ports
+  ansible.builtin.include_tasks: ports.yml
+  when: apache2_ports is defined
+
+- name: Include tasks to manage apache2 environment variables
+  ansible.builtin.include_tasks: envvars.yml
+  when: apache2_envvars is defined
+
+- name: Include tasks to override apache2 systemd unit settings
+  ansible.builtin.include_tasks: systemd_override.yml
+  when: apache2_systemd_override is defined
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

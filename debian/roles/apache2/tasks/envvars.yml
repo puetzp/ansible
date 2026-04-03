@@ -1,0 +1,10 @@
+---
+- name: Create /etc/apache2/envvars
+  ansible.builtin.copy:
+    content: "{{ apache2_envvars }}"
+    dest: /etc/apache2/envvars
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart apache2

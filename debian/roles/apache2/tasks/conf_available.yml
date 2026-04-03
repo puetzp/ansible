@@ -1,0 +1,19 @@
+---
+- name: Create /etc/apache2/conf-available
+  ansible.builtin.file:
+    path: /etc/apache2/conf-available
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create apache2 configuration snippets
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "/etc/apache2/conf-available/{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ apache2_conf_available | dict2items }}"
+  notify:
+    - Restart apache2
