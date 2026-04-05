@@ -1,0 +1,50 @@
+---
+- name: Create /etc/sysctl.d
+  ansible.builtin.file:
+    path: /etc/sysctl.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _sysctl_d: {}
+
+- name: Define sysctl configuration files
+  ansible.builtin.set_fact:
+    _sysctl_d: "{{ _sysctl_d | combine({ '/etc/sysctl.d/' ~ item.key: item.value }) }}"
+  loop: "{{ sysctl_d | dict2items }}"
+
+- name: Find existing sysctl configuration files
+  ansible.builtin.find:
+    paths: /etc/sysctl.d
+    excludes: 'README.sysctl'
+  register: files
+
+- name: Remove unwanted sysctl configuration files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _sysctl_d
+  loop: "{{ files.files }}"
+  notify:
+    - Restart systemd-sysctl
+
+- name: Remove obsolete default sysctl configuration file
+  ansible.builtin.file:
+    path: /etc/sysctl.conf
+    state: absent
+  notify:
+    - Restart systemd-sysctl
+
+- name: Create sysctl configuration files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ _sysctl_d | dict2items }}"
+  notify:
+    - Restart systemd-sysctl
