@@ -1,0 +1,4 @@
+---
+- name: Include tasks to manage sysctl configuration files
+  ansible.builtin.include_tasks: conf.yml
+  when: sysctl_d is defined
