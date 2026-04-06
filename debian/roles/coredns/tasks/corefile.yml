@@ -1,0 +1,18 @@
+---
+- name: Create /etc/coredns
+  ansible.builtin.file:
+    path: /etc/coredns
+    owner: root
+    group: root
+    mode: '0755'
+    state: directory
+
+- name: Create /etc/coredns/Corefile
+  ansible.builtin.copy:
+    content: "{{ coredns_corefile }}"
+    dest: /etc/coredns/Corefile
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart coredns

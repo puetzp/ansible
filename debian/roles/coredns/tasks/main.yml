@@ -1,0 +1,52 @@
+---
+- name: Download coredns
+  ansible.builtin.get_url:
+    url: "https://github.com/coredns/coredns/releases/download/v{{ coredns_version }}/coredns_{{ coredns_version }}_linux_amd64.tgz"
+    dest: "/var/tmp/coredns-{{ coredns_version }}.tgz"
+    checksum: "{{ coredns_checksum }}"
+
+- name: Unpack coredns
+  ansible.builtin.unarchive:
+    src: "/var/tmp/coredns-{{ coredns_version }}.tgz"
+    dest: /usr/local/bin
+    remote_src: true
+    creates: "/usr/local/bin/coredns-{{ coredns_version }}"
+    owner: root
+    group: root
+    mode: '0755'
+    extra_opts:
+      - '--transform'
+      - 's/coredns/coredns-{{ coredns_version }}/'
+
+- name: Create symlink /usr/local/bin/coredns
+  ansible.builtin.file:
+    src: "coredns-{{ coredns_version }}"
+    dest: /usr/local/bin/coredns
+    state: link
+  notify:
+    - Restart coredns
+
+- name: Create /usr/lib/systemd/system/coredns.service
+  ansible.builtin.copy:
+    src: coredns.service
+    dest: /usr/lib/systemd/system/coredns.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart coredns
+
+- name: Include tasks to manage coredns defaults
+  ansible.builtin.include_tasks: defaults.yml
+  when: coredns_defaults is defined
+
+- name: Include tasks to manage Corefile
+  ansible.builtin.include_tasks: corefile.yml
+  when: coredns_corefile is defined
+
+- name: Include tasks to override coredns systemd unit settings
+  ansible.builtin.include_tasks: systemd_override.yml
+  when: coredns_systemd_override is defined
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

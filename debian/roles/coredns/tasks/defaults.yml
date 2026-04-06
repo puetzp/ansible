@@ -1,0 +1,10 @@
+---
+- name: Create /etc/default/coredns
+  ansible.builtin.copy:
+    content: "{{ coredns_defaults }}"
+    dest: /etc/default/coredns
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart coredns

@@ -1,0 +1,7 @@
+---
+coredns_defaults: |
+  # Use this file to invoke coredns with additional arguments without having
+  # to change the systemd service unit, e.g.:
+  # OPTS =-p 1053
+  OPTS=
+
