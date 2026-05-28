@@ -1,0 +1,10 @@
+---
+- name: Create wg0 configuration file
+  ansible.builtin.copy:
+    content: "{{ wireguard_wg0_conf }}"
+    dest: "{{ wireguard_wg0_conf_path }}"
+    owner: root
+    group: root
+    mode: '0640'
+  notify:
+    - Restart wg-quick@wg0
