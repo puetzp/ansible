@@ -1,0 +1,18 @@
+---
+- name: Create /etc/systemd/system/wg-quick@wg0.service.d
+  ansible.builtin.file:
+    path: /etc/systemd/system/wg-quick@wg0.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create /etc/systemd/system/wg-quick@wg0.service.d/override.conf
+  ansible.builtin.copy:
+    content: "{{ wireguard_systemd_override }}"
+    dest: /etc/systemd/system/wg-quick@wg0.service.d/override.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart wg-quick@wg0

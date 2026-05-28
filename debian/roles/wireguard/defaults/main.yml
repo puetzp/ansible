@@ -1,0 +1,2 @@
+---
+wireguard_wg0_conf_path: /etc/wireguard/wg0.conf

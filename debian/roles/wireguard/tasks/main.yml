@@ -1,0 +1,24 @@
+---
+- name: Install wireguard
+  ansible.builtin.apt:
+    name: wireguard
+    state: present
+    install_recommends: false
+    update_cache: true
+
+- name: Generate keys
+  ansible.builtin.shell:
+    cmd: wg genkey | tee privatekey | wg pubkey > publickey
+    chdir: /etc/wireguard
+    creates: /etc/wireguard/privatekey
+
+- name: Include tasks to manage wg0 interface configuration file
+  ansible.builtin.include_tasks: wg0_conf.yml
+  when: wireguard_wg0_conf is defined
+
+- name: Include tasks to override wireguard systemd unit settings for wg0 interface
+  ansible.builtin.include_tasks: systemd_override.yml
+  when: wireguard_systemd_override is defined
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
