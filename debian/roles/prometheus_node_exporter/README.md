@@ -51,6 +51,9 @@ prometheus_node_exporter_defaults: |
 ---
 wireguard_host: 10.10.10.3
 
+# This is not a role variable, but a custom variable to further
+# adjust settings on the host level that feeds into the templated
+# group configuration.
 prometheus_node_exporter_services:
   - coredns
 ```
