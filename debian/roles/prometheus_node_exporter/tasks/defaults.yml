@@ -1,0 +1,10 @@
+---
+- name: Create /etc/default/prometheus-node-exporter
+  ansible.builtin.copy:
+    content: "{{ prometheus_node_exporter_defaults }}"
+    dest: /etc/default/prometheus-node-exporter
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart prometheus-node-exporter

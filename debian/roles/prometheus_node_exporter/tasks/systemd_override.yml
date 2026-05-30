@@ -1,0 +1,18 @@
+---
+- name: Create /etc/systemd/system/prometheus-node-exporter.service.d
+  ansible.builtin.file:
+    path: /etc/systemd/system/prometheus-node-exporter.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create /etc/systemd/system/prometheus-node-exporter.service.d/override.conf
+  ansible.builtin.copy:
+    content: "{{ prometheus_node_exporter_systemd_override }}"
+    dest: /etc/systemd/system/prometheus-node-exporter.service.d/override.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart prometheus-node-exporter

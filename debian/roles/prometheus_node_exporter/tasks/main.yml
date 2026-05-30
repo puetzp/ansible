@@ -1,0 +1,16 @@
+---
+- name: Install prometheus-node-exporter
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+    install_recommends: false
+    update_cache: true
+
+- name: Include tasks to configure prometheus-node-exporter defaults
+  ansible.builtin.include_tasks: defaults.yml
+  when: prometheus_node_exporter_defaults is defined
+
+- name: Include tasks to override prometheus-node-exporter systemd unit settings
+  ansible.builtin.include_tasks: systemd_override.yml
+  when: prometheus_node_exporter_systemd_override is defined
+
