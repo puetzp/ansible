@@ -1,0 +1,11 @@
+---
+- name: Create /etc/systemd/journald.conf
+  ansible.builtin.copy:
+    content: "{{ systemd_journald }}"
+    dest: /etc/systemd/journald.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Restart systemd-journald
+
