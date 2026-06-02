@@ -1,0 +1,7 @@
+---
+- name: Include tasks to configure systemd-journald
+  ansible.builtin.include_tasks: conf.yml
+  when: systemd_journald is defined
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
