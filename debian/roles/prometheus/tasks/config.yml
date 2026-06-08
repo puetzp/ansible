@@ -1,7 +1,7 @@
 ---
 - name: Create /etc/prometheus/prometheus.yml
   ansible.builtin.copy:
-    content: "{{ prometheus_config }}"
+    content: "{{ prometheus_config | to_yaml }}"
     dest: /etc/prometheus/prometheus.yml
     owner: prometheus
     group: prometheus

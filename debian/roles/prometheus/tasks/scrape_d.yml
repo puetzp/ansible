@@ -32,7 +32,7 @@
   
 - name: Create prometheus scrape config files
   ansible.builtin.copy:
-    content: "{{ item.value }}"
+    content: "{{ item.value | to_yaml }}"
     dest: "{{ item.key }}"
     owner: prometheus
     group: prometheus
