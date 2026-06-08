@@ -1,0 +1,19 @@
+---
+- name: Create /etc/nginx/sites-available
+  ansible.builtin.file:
+    path: /etc/nginx/sites-available
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create nginx site configuration files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "/etc/nginx/sites-available/{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ nginx_sites_available | dict2items }}"
+  notify:
+    - Restart nginx

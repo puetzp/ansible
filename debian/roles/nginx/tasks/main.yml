@@ -1,0 +1,30 @@
+---
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    install_recommends: false
+    update_cache: true
+
+- name: Include tasks to manage nginx configuration
+  ansible.builtin.include_tasks: conf.yml
+  when: nginx_conf is defined
+
+- name: Include tasks to manage nginx configuration fragments
+  ansible.builtin.include_tasks: conf_d.yml
+  when: nginx_conf_d is defined
+
+- name: Include tasks to manage nginx site configurations
+  ansible.builtin.include_tasks: sites_available.yml
+  when: nginx_sites_available is defined
+
+- name: Include tasks to enable nginx site configurations
+  ansible.builtin.include_tasks: sites_enabled.yml
+  when: nginx_sites_enabled is defined
+
+- name: Include tasks to override nginx systemd unit settings
+  ansible.builtin.include_tasks: systemd_override.yml
+  when: nginx_systemd_override is defined
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers

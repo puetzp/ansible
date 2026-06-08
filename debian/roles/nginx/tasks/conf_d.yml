@@ -1,0 +1,42 @@
+---
+- name: Create /etc/nginx/conf.d
+  ansible.builtin.file:
+    path: /etc/nginx/conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Define variable
+  ansible.builtin.set_fact:
+    _nginx_conf_d: {}
+
+- name: Define nginx configuration files
+  ansible.builtin.set_fact:
+    _nginx_conf_d: "{{ _nginx_conf_d | combine({ '/etc/nginx/conf.d/' ~ item.key: item.value }) }}"
+  loop: "{{ nginx_conf_d | dict2items }}"
+
+- name: Find existing nginx configuration files
+  ansible.builtin.find:
+    paths: /etc/nginx/conf.d
+  register: files
+
+- name: Remove unwanted nginx configuration files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  when: item.path not in _nginx_conf_d
+  loop: "{{ files.files }}"
+  notify:
+    - Restart nginx
+  
+- name: Create nginx configuration files
+  ansible.builtin.copy:
+    content: "{{ item.value }}"
+    dest: "{{ item.key }}"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ _nginx_conf_d | dict2items }}"
+  notify:
+    - Restart nginx
