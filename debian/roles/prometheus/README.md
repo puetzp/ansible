@@ -41,17 +41,19 @@ Example variables
 prometheus_defaults: |
   ARGS="--web.listen-address=192.168.1.100:9090 "
 
-prometheus_config: "{{ lookup('file', 'files/etc/prometheus/prometheus.yml', rstrip = false) }}"
+# Ensure that you use the `from_yaml` filter when loading the configuration
+# via file lookup.
+prometheus_config: "{{ lookup('file', 'files/etc/prometheus/prometheus.yml', rstrip = false) | from_yaml }}"
 
 prometheus_scrape_d:
-  node_exporter.yml: |
+  node_exporter.yml:
     scrape_configs:
       - job_name: node
         static_configs:
           - targets: ['localhost:9100']
 
 prometheus_rule_d:
-  http_total.yml: |
+  http_total.yml:
     groups:
       - name: example
         rules:
@@ -59,13 +61,6 @@ prometheus_rule_d:
             expr: sum by (code) (prometheus_http_requests_total)
 
 ```
-
-Caveats
--------
-
-Since Prometheus configuration files are written in YAML (or optionally JSON) it would make sense to write the values from `prometheus_rule_d` and `prometheus_scrape_d` to a file using the `to_yaml` filter. However the values in these mappings might be static file lookups (see the example above). Since the result of these lookups is a string, the `to_yaml` filter behaves not as expected and writes the result as a single quoted YAML scalar.
-
-This is avoided by having all variables defined as (multi-line) strings, write it as-is to the destination file and leave it to `promtool` to validate the YAML syntax and configuration parameters inside.
 
 Links
 -----
