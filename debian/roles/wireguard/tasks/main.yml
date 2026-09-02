@@ -8,9 +8,9 @@
 
 - name: Generate keys
   ansible.builtin.shell:
-    cmd: wg genkey | tee privatekey | wg pubkey > publickey
+    cmd: wg genkey | tee private.key | wg pubkey > public.key
     chdir: /etc/wireguard
-    creates: /etc/wireguard/privatekey
+    creates: /etc/wireguard/private.key
 
 - name: Include tasks to manage wg0 interface configuration file
   ansible.builtin.include_tasks: wg0_conf.yml
