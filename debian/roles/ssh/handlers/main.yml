@@ -1,0 +1,5 @@
+---
+- name: Hash .ssh/known_hosts2
+  ansible.builtin.command:
+    cmd: "ssh-keygen -H -f {{ ansible_env.HOME }}/.ssh/known_hosts2"
+
