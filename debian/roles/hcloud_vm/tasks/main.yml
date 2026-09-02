@@ -1,0 +1,523 @@
+---
+- name: Create cache directory
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/cache/{{ inventory_hostname }}/wireguard"
+    state: directory
+  delegate_to: localhost
+
+- name: Show active hcloud-cli context
+  ansible.builtin.command:
+    cmd: hcloud context active
+  register: _hcloud_active_context
+  delegate_to: localhost
+
+- name: List available hcloud-cli contexts
+  ansible.builtin.command:
+    cmd: hcloud context list --output json
+  register: _hcloud_contexts
+  when: _hcloud_active_context.stdout != hcloud_vm_context
+  delegate_to: localhost
+
+- name: Create hcloud-cli context
+  ansible.builtin.command:
+    cmd: "hcloud context create {{ hcloud_vm_context }} --token-from-env"
+  environment:
+    HCLOUD_TOKEN: "{{ hcloud_vm_token }}"
+  when: _hcloud_active_context.stdout != hcloud_vm_context and _hcloud_contexts.stdout | from_json | selectattr('name', 'equalto', hcloud_vm_context) | count == 0
+  delegate_to: localhost
+
+- name: Activate hcloud-cli context
+  ansible.builtin.command:
+    cmd: "hcloud context use {{ hcloud_vm_context }}"
+  environment:
+    HCLOUD_TOKEN: "{{ hcloud_vm_token }}"
+  when: _hcloud_active_context.stdout != hcloud_vm_context and _hcloud_contexts.stdout | from_json | selectattr('name', 'equalto', hcloud_vm_context) | count == 1
+  delegate_to: localhost
+
+- name: Fetch names of existing VMs
+  ansible.builtin.shell:
+    cmd: hcloud server list --output json
+  register: _existing_vms
+  delegate_to: localhost
+
+- name: Determine if VM exists
+  ansible.builtin.set_fact:
+    _nonexistent: "{{ inventory_hostname not in _existing_vms.stdout | from_json | map(attribute='name') | list }}"
+
+- name: Create VM
+  block:
+    - name: Create primary IP
+      ansible.builtin.command:
+        cmd: "hcloud primary-ip create --type ipv6 --name {{ inventory_hostname }} --location {{ hcloud_vm_location }} --output json"
+      register: _primary_ip_response
+      delegate_to: localhost
+
+    - name: Set primary IP
+      ansible.builtin.set_fact:
+        primary_ip_data: "{{ _primary_ip_response.stdout | from_json }}"
+      delegate_to: localhost
+
+    # When creating the VM the SSH key is not needed as we boot into rescue mode.
+    # However it avoids generating an email with the initial root password which will
+    # also not be needed.
+    - name: Create VM
+      ansible.builtin.command:
+        cmd: "hcloud server create --name {{ inventory_hostname }} --type {{ hcloud_vm_type }} --image debian-13 --location {{ hcloud_vm_location }} --primary-ipv6 {{ primary_ip_data.primary_ip.id }} --without-ipv4 --ssh-key {{ hcloud_vm_ssh_key_name }} --start-after-create=false"
+      delegate_to: localhost
+
+    - name: Enable rescue mode for VM
+      ansible.builtin.command:
+        cmd: "hcloud server enable-rescue {{ inventory_hostname }} --ssh-key {{ hcloud_vm_ssh_key_name }}"
+      delegate_to: localhost
+
+    - name: Boot VM into rescue mode
+      ansible.builtin.command:
+        cmd: "hcloud server reset {{ inventory_hostname }}"
+      delegate_to: localhost
+  when: _nonexistent
+
+- name: Set private IP
+  ansible.builtin.set_fact:
+    private_ip: "{{ ansible_host }}"
+
+- name: Retain private IP as WireGuard tunnel IP
+  ansible.builtin.copy:
+    content: "{{ private_ip }}/32"
+    dest: "{{ playbook_dir }}/cache/{{ inventory_hostname }}/wireguard/allowed-ip"
+  delegate_to: localhost
+
+- name: Set public IP
+  ansible.builtin.set_fact:
+    public_ip: "{{ primary_ip_data.primary_ip.ip | ansible.utils.ipaddr('1') | ansible.utils.ipaddr('address') }}"
+
+- name: Retain public IP as WireGuard endpoint
+  ansible.builtin.copy:
+    content: "[{{ public_ip }}]:51820"
+    dest: "{{ playbook_dir }}/cache/{{ inventory_hostname }}/wireguard/endpoint"
+  delegate_to: localhost
+
+- name: Bootstrap VM
+  block:
+    - name: Wait for VM to boot into rescue mode
+      ansible.builtin.wait_for_connection:
+        delay: 30
+
+    - name: Add label to primary disk
+      ansible.builtin.command:
+        cmd: parted -s /dev/sda mklabel msdos
+
+    - name: Create boot partition
+      ansible.builtin.command:
+        cmd: parted -s /dev/sda mkpart primary "ext3" 1048576B 525336575B
+
+    - name: Create primary partition
+      ansible.builtin.command:
+        cmd: parted -s /dev/sda mkpart primary "" 525336576B 100%
+
+    - name: Create filesystem on boot partition
+      ansible.builtin.command:
+        cmd: mkfs.ext4 /dev/sda1
+
+    - name: Set LVM flag on primary partition
+      ansible.builtin.command:
+        cmd: parted -s /dev/sda set 2 lvm on
+
+    - name: Create physical volume
+      ansible.builtin.command:
+        cmd: pvcreate -ff -y  /dev/sda2
+
+    - name: Create volume group
+      ansible.builtin.command:
+        cmd: vgcreate vg0 /dev/sda2
+
+    - name: Activate volume group
+      ansible.builtin.command:
+        cmd: vgchange -a y vg0
+
+    - name: Create logical volume "root"
+      ansible.builtin.command:
+        cmd: lvcreate --yes -n root -L 5120 vg0
+
+    - name: Create ext4 filesystem on logical volume "root"
+      ansible.builtin.command:
+        cmd: mkfs.ext4 /dev/vg0/root
+
+    - name: Create logical volume "swap"
+      ansible.builtin.command:
+        cmd: lvcreate --yes -n swap -L 1024 vg0
+
+    - name: Create swap area on logical volume "swap"
+      ansible.builtin.command:
+        cmd: mkswap /dev/vg0/swap
+
+    - name: Create logical volume "home"
+      ansible.builtin.command:
+        cmd: lvcreate --yes -n home -L 1024 vg0
+
+    - name: Create ext4 filesystem on logical volume "home"
+      ansible.builtin.command:
+        cmd: mkfs.ext4 /dev/vg0/home
+
+    - name: Create logical volume "var"
+      ansible.builtin.command:
+        cmd: lvcreate --yes -n var -L 5120 vg0
+
+    - name: Create ext4 filesystem on logical volume "var"
+      ansible.builtin.command:
+        cmd: mkfs.ext4 /dev/vg0/var
+
+    - name: Create logical volume "var_log"
+      ansible.builtin.command:
+        cmd: lvcreate --yes -n var_log -L 1024 vg0
+
+    - name: Create ext4 filesystem on logical volume "var_log"
+      ansible.builtin.command:
+        cmd: mkfs.ext4 /dev/vg0/var_log
+
+    - name: Determine UUID of boot partition
+      ansible.builtin.command:
+        cmd: blkid /dev/sda1 -s UUID -o value
+      register: _boot_uuid
+
+    - name: Create temporary directory to mount filesystems
+      ansible.builtin.tempfile:
+        state: directory
+      register: _tmp_dir
+
+    - name: Mount "root" filesystem
+      ansible.builtin.command:
+        cmd: "mount /dev/vg0/root {{ _tmp_dir.path }}/"
+
+    - name: Mount "boot" filesystem
+      ansible.builtin.command:
+        cmd: "mount -m /dev/disk/by-uuid/{{ _boot_uuid.stdout}} {{ _tmp_dir.path }}/boot"
+
+    - name: Mount "home" filesystem
+      ansible.builtin.command:
+        cmd: "mount -m /dev/vg0/home {{ _tmp_dir.path }}/home"
+
+    - name: Mount "var" filesystem
+      ansible.builtin.command:
+        cmd: "mount -m /dev/vg0/var {{ _tmp_dir.path }}/var"
+
+    - name: Mount "var_log" filesystem
+      ansible.builtin.command:
+        cmd: "mount -m /dev/vg0/var_log {{ _tmp_dir.path }}/var/log"
+
+    - name: Install a minimal Debian system
+      ansible.builtin.command:
+        cmd: "debootstrap --arch=amd64 --variant=minbase --include=dialog,whiptail,perl,dosfstools,e2fsprogs --components main trixie {{ _tmp_dir.path }} https://mirror.hetzner.com/debian/packages"
+
+    - name: Mount /dev from host
+      ansible.builtin.command:
+        cmd: "mount --bind /dev {{ _tmp_dir.path }}/dev"
+
+    - name: Mount /run from host
+      ansible.builtin.command:
+        cmd: "mount --bind /run {{ _tmp_dir.path }}/run"
+
+    - name: Mount virtual filesystem "proc"
+      ansible.builtin.command:
+        cmd: "mount none -t proc {{ _tmp_dir.path }}/proc"
+
+    - name: Mount virtual filesystem "sys"
+      ansible.builtin.command:
+        cmd: "mount none -t sysfs {{ _tmp_dir.path }}/sys"
+
+    - name: Mount virtual filesystem "pts"
+      ansible.builtin.command:
+        cmd: "mount none -t devpts {{ _tmp_dir.path }}/dev/pts"
+
+    - name: Set machine-id
+      ansible.builtin.copy:
+        content: |
+          uninitialized
+        dest: "{{ _tmp_dir.path }}/etc/machine-id"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Update fstab
+      ansible.builtin.copy:
+        content: |
+          /dev/vg0/root / ext4 noatime,rw 0 1
+          UUID={{ _boot_uuid.stdout }} /boot ext4 defaults 0 2
+          /dev/vg0/home /home ext4 noatime,nosuid,nodev,noexec,rw 0 2
+          /dev/vg0/var /var ext4 noatime,nosuid,nodev,rw 0 2
+          /dev/vg0/var_log /var/log ext4 noatime,nosuid,nodev,noexec,rw 0 2
+          /dev/vg0/swap none swap sw 0 0
+          tmpfs /tmp tmpfs noatime,nosuid,nodev,noexec,rw,size=50% 0 0
+        dest: "{{ _tmp_dir.path }}/etc/fstab"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Set hostname
+      ansible.builtin.copy:
+        content: |
+          {{ inventory_hostname_short }}
+        dest: "{{ _tmp_dir.path }}/etc/hostname"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Update hosts
+      ansible.builtin.copy:
+        content: |
+          {{ private_ip }} {{ inventory_hostname }} {{ inventory_hostname_short }}
+        dest: "{{ _tmp_dir.path }}/etc/hosts"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create apt configuration directory
+      ansible.builtin.file:
+        path: "{{ _tmp_dir.path }}/etc/apt/apt.conf.d"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create apt drop-in file to force installation of package maintainer's configurations
+      ansible.builtin.copy:
+        content: |
+          DPkg {
+            Options {
+              "--force-confdef";
+            }
+          };
+        dest: "{{ _tmp_dir.path }}/etc/apt/apt.conf.d/force_confdef"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Preseed debconf questions
+      ansible.builtin.shell:
+        cmd: |
+          cat <<EOF | chroot {{ _tmp_dir.path }} debconf-set-selections
+          locales locales/default_environment_locale select en_US.UTF-8
+          locales locales/locales_to_be_generated multiselect en_US.UTF-8 UTF-8
+          keyboard-configuration  keyboard-configuration/modelcode        string pc105
+          keyboard-configuration  keyboard-configuration/xkb-keymap       select de
+          keyboard-configuration  keyboard-configuration/variant  select Germany
+          keyboard-configuration  keyboard-configuration/model    select Generic 105-key (Intl) PC
+          keyboard-configuration  keyboard-configuration/layoutcode       string de
+          keyboard-configuration  keyboard-configuration/optionscode      string ctrl:nocaps,terminate:ctrl_alt_bksp
+          EOF
+
+    - name: Update apt cache
+      ansible.builtin.command:
+        cmd: "chroot {{ _tmp_dir.path }} apt update"
+
+    - name: Install default packages
+      ansible.builtin.command:
+        cmd: >
+          chroot {{ _tmp_dir.path }} apt install --no-install-recommends --yes
+          apt-listchanges
+          apt-utils
+          bash-completion
+          bind9-dnsutils
+          ca-certificates
+          chrony
+          console-setup
+          dbus
+          distro-info
+          dmidecode
+          doc-debian
+          fdisk
+          file
+          gettext-base
+          groff-base
+          grub-pc
+          hdparm
+          ifupdown
+          kbd
+          less
+          libpam-systemd
+          linux-image-amd64
+          locales
+          logrotate
+          lsof
+          lvm2
+          man-db
+          manpages
+          media-types
+          nftables
+          openssl
+          parted
+          pciutils
+          procinfo
+          python3-minimal
+          qemu-guest-agent
+          ssh
+          systemd-resolved
+          systemd-sysv
+          time
+          shim-signed
+          syslog-ng
+          ucf
+          vim-tiny
+          wireguard
+          xz-utils
+          zstd
+
+    - name: Create /etc/network/interfaces
+      ansible.builtin.copy:
+        content: |
+          source /etc/network/interfaces.d/*
+
+          auto lo
+          iface lo inet loopback
+
+          auto enp1s0
+          iface enp1s0 inet6 static
+            address {{ public_ip }}
+           netmask 64
+           gateway fe80::1
+        dest: "{{ _tmp_dir.path }}/etc/network/interfaces"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create /etc/systemd/resolved.conf
+      ansible.builtin.copy:
+        content: |
+          [Resolve]
+          DNS=2620:fe::fe#dns.quad9.net 2620:fe::9#dns.quad9.net
+          DNSSEC=yes
+          DNSOverTLS=yes
+          LLMNR=no
+          Cache=yes
+        dest: "{{ _tmp_dir.path }}/etc/systemd/resolved.conf"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Set grub defaults
+      ansible.builtin.copy:
+        content: |
+          GRUB_DEFAULT=0
+          GRUB_TIMEOUT=0
+          GRUB_DISTRIBUTOR=`lsb_release -i -s 2> /dev/null || echo Debian`
+          GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nomodeset"
+          GRUB_CMDLINE_LINUX=""
+        dest: "{{ _tmp_dir.path }}/etc/default/grub"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install grub
+      ansible.builtin.command:
+        cmd: "chroot {{ _tmp_dir.path }} grub-install /dev/sda"
+
+    - name: Update grub
+      ansible.builtin.command:
+        cmd: "chroot {{ _tmp_dir.path }} update-grub"
+
+    - name: Create WireGuard key
+      ansible.builtin.shell:
+        cmd: "chroot {{ _tmp_dir.path }} wg genkey | tee {{ _tmp_dir.path }}/etc/wireguard/private.key | chroot {{ _tmp_dir.path }} wg pubkey > {{ _tmp_dir.path }}/etc/wireguard/public.key"
+
+    - name: Create WireGuard interface configuration
+      ansible.builtin.copy:
+        content: |
+          [Interface]
+          Address = {{ private_ip }}/32
+          ListenPort = 51820
+          PostUp = wg set %i private-key <(cat /etc/wireguard/private.key)
+
+          [Peer]
+          PublicKey = {{ hcloud_vm_wireguard_public_key }}
+          AllowedIPs = {{ hcloud_vm_wireguard_allowed_ip }}
+        dest: "{{ _tmp_dir.path }}/etc/wireguard/wg0.conf"
+        owner: root
+        group: root
+        mode: '0640'
+
+    - name: Enable WireGuard
+      ansible.builtin.command:
+        cmd: "chroot {{ _tmp_dir.path }} systemctl enable wg-quick@wg0.service"
+
+    - name: Retain /etc/wireguard/public.key
+      ansible.builtin.fetch:
+        src: "{{ _tmp_dir.path }}/etc/wireguard/public.key"
+        dest: "{{ playbook_dir }}/cache/{{ inventory_hostname }}/wireguard/"
+        flat: true
+
+    - name: Create secure sshd configuration
+      ansible.builtin.template:
+        src: etc/ssh/sshd_config.j2
+        dest: "{{ _tmp_dir.path }}/etc/ssh/sshd_config"
+        owner: root
+        group: root
+        mode: '0640'
+
+    - name: Create sshd systemd unit override directory
+      ansible.builtin.file:
+        path: "{{ _tmp_dir.path }}/etc/systemd/system/sshd.service.d"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Override sshd systemd unit to start after WireGuard
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          After=wg-quick@wg0.service
+          Wants=wg-quick@wg0.service
+        dest: "{{ _tmp_dir.path }}/etc/systemd/system/sshd.service.d/override.conf"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Retain /etc/ssh/ssh_host_ecdsa_key.pub
+      ansible.builtin.fetch:
+        src: "{{ _tmp_dir.path }}/etc/ssh/ssh_host_ecdsa_key.pub"
+        dest: "{{ playbook_dir }}/cache/{{ inventory_hostname }}/ssh/"
+        flat: true
+
+    - name: Retain /etc/ssh/ssh_host_ed25519_key.pub
+      ansible.builtin.fetch:
+        src: "{{ _tmp_dir.path }}/etc/ssh/ssh_host_ed25519_key.pub"
+        dest: "{{ playbook_dir }}/cache/{{ inventory_hostname }}/ssh/"
+        flat: true
+
+    - name: Retain /etc/ssh/ssh_host_rsa_key.pub
+      ansible.builtin.fetch:
+        src: "{{ _tmp_dir.path }}/etc/ssh/ssh_host_rsa_key.pub"
+        dest: "{{ playbook_dir }}/cache/{{ inventory_hostname }}/ssh/"
+        flat: true
+
+    - name: Create /root/.ssh
+      ansible.builtin.file:
+        path: "{{ _tmp_dir.path }}/root/.ssh"
+        state: directory
+        owner: root
+        group: root
+        mode: '0750'
+
+    - name: Create /root/.ssh/authorized_keys
+      ansible.builtin.copy:
+        content: "{{ hcloud_vm_ssh_key }}"
+        dest: "{{ _tmp_dir.path }}/root/.ssh/authorized_keys"
+        owner: root
+        group: root
+        mode: '0600'
+
+    - name: Configure hashed password for root
+      ansible.builtin.command:
+        cmd: "chroot {{ _tmp_dir.path}} usermod -p '{{ hcloud_vm_root_password }}' root"
+
+    - name: Reboot VM
+      ansible.builtin.command:
+        cmd: "reboot"
+      ignore_errors: true
+      ignore_unreachable: true
+
+  when: _nonexistent
+  remote_user: root
+  vars:
+    ansible_host: "{{ primary_ip_data.primary_ip.ip | ansible.utils.ipaddr('2') | ansible.utils.ipaddr('address') }}"
+    ansible_ssh_host_key_checking: false
+    ansible_interpreter_python: /usr/bin/python3

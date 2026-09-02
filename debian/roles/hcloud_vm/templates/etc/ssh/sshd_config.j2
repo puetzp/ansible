@@ -1,0 +1,46 @@
+Include /etc/ssh/sshd_config.d/*.conf
+
+AcceptEnv LANG LC_*
+AddressFamily inet
+AllowAgentForwarding no
+AllowStreamLocalForwarding no
+AllowTcpForwarding no
+AllowUsers root
+AuthenticationMethods publickey
+AuthorizedKeysFile .ssh/authorized_keys
+Banner /etc/issue.net
+Ciphers aes128-ctr,aes192-ctr,aes256-ctr
+ClientAliveCountMax 3
+ClientAliveInterval 20
+Compression no
+DebianBanner no
+DisableForwarding yes
+GatewayPorts no
+GSSAPIAuthentication no
+HostbasedAuthentication no
+HostKeyAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521
+IgnoreRhosts yes
+KexAlgorithms ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha256
+ListenAddress {{ private_ip }}
+LoginGraceTime 10
+LogLevel VERBOSE
+MACs hmac-sha2-256,hmac-sha2-512,hmac-sha1
+MaxAuthTries 4
+MaxSessions 10
+MaxStartups 5
+ModuliFile /etc/ssh/moduli
+PasswordAuthentication no
+PermitEmptyPasswords no
+PermitRootLogin prohibit-password
+PermitUserEnvironment no
+PidFile /run/sshd.pid
+Port 22
+PrintLastLog no
+PrintMotd no
+PubkeyAcceptedAlgorithms ssh-ed25519
+PubkeyAuthentication yes
+StrictModes yes
+Subsystem sftp /usr/lib/openssh/sftp-server
+UseDNS no
+UsePAM yes
+X11Forwarding no
