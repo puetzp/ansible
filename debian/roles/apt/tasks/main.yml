@@ -6,3 +6,7 @@
 - name: Include tasks to configure apt keyrings
   ansible.builtin.include_tasks: keyrings.yml
   when: apt_keyrings is defined
+
+- name: Include tasks to configure automatic apt package upgrade
+  ansible.builtin.include_tasks: upgrade.yml
+  when: apt_upgrade

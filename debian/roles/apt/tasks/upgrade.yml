@@ -1,0 +1,26 @@
+---
+- name: Create /etc/systemd/system/apt-upgrade.service
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      Description=Automatic apt upgrade
+      After=network-online.target
+
+      [Service]
+      Type=oneshot
+      Environment="DEBIAN_FRONTEND=noninteractive"
+      ExecStart=apt-get --yes --update --option "Dpkg::Options=--force-confold" --no-install-recommends dist-upgrade
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/apt-upgrade.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Enable apt-upgrade.service
+  ansible.builtin.systemd_service:
+    name: apt-upgrade.service
+    enabled: true
+    daemon-reload: true
+
