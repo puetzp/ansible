@@ -1,0 +1,14 @@
+---
+- name: Create logical volume
+  community.general.lvol:
+    lv: "{{ item.name }}"
+    vg: "{{ item.vg }}"
+    size: "{{ item.size }}"
+  loop: "{{ lvm_lvs }}"
+
+- name: Create filesystem on logical volumes
+  community.general.filesystem:
+    fstype: "{{ item.filesystem }}"
+    dev: "/dev/mapper/{{ item.vg }}-{{ item.name }}"
+    resizefs: true
+  loop: "{{ lvm_lvs }}"

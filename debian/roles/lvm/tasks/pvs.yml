@@ -1,0 +1,7 @@
+---
+- name: Create physical volume
+  community.general.lvm_pv:
+    device: "{{ item }}"
+    resize: true
+  loop: "{{ lvm_pvs }}"
+

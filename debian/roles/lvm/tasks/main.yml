@@ -1,0 +1,12 @@
+---
+- name: Include tasks to configure physical volumes
+  ansible.builtin.include_tasks: pvs.yml
+  when: lvm_pvs is defined
+
+- name: Include tasks to configure volume groups
+  ansible.builtin.include_tasks: vgs.yml
+  when: lvm_vgs is defined
+
+- name: Include tasks to configure logical volumes
+  ansible.builtin.include_tasks: lvs.yml
+  when: lvm_lvs is defined
