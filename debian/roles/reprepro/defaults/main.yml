@@ -1,0 +1,4 @@
+---
+reprepro_basedir: /etc/reprepro
+reprepro_outdir: /srv/reprepro
+reprepro_user: reprepro

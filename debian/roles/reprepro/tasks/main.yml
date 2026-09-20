@@ -1,0 +1,136 @@
+---
+- name: Install dependencies
+  ansible.builtin.apt:
+    pkg:
+      - gnupg
+      - reprepro
+      - shellcheck
+    install_recommends: false
+    update_cache: true
+
+- name: Create user
+  ansible.builtin.user:
+    name: "{{ reprepro_user }}"
+    comment: "Local Debian repository management"
+    home: "/home/{{ reprepro_user }}"
+    password: '!'
+    shell: /bin/bash
+
+- name: Create user keyring
+  become: true
+  become_user: "{{ reprepro_user }}"
+  become_method: su
+  no_log: true
+  ansible.builtin.command:
+    cmd: gpg --generate-key --batch
+    stdin: |
+      Key-Type: EdDSA
+      Key-Curve: ed25519
+      Key-Usage: sign
+      Passphrase: {{ reprepro_gpg_passphrase }}
+      Name-Real: "{{ reprepro_user }}"
+      Expire-Date: 365d
+      %commit
+    creates: "/home/{{ reprepro_user }}/.gnupg/pubring.kbx"
+  register: _reprepro_user_keyring
+
+- name: Keep copy of user keyring in gpg format
+  become: true
+  become_user: "{{ reprepro_user }}"
+  become_method: su
+  ansible.builtin.shell:
+    cmd: "gpg --no-default-keyring --keyring /home/{{ reprepro_user }}/.gnupg/pubring.kbx --export {{ reprepro_user }} > /home/{{ reprepro_user }}/.gnupg/pubring.gpg"
+  when: _reprepro_user_keyring.changed
+
+- name: Cache public user keyring in gpg format
+  ansible.builtin.fetch:
+    src: "/home/{{ reprepro_user }}/.gnupg/pubring.gpg"
+    dest: "{{ playbook_dir }}/cache/{{ inventory_hostname }}/gpg/"
+    flat: yes
+
+- name: Import required upstream gpg keyrings
+  become: true
+  become_user: "{{ reprepro_user }}"
+  become_method: su
+  ansible.builtin.command:
+    cmd: "gpg --import {{ item }}"
+  loop: "{{ reprepro_gpg_keyrings | default([]) }}"
+  changed_when: true
+
+- name: Create basedir
+  ansible.builtin.file:
+    path: "{{ reprepro_basedir }}"
+    state: directory
+    owner: "{{ reprepro_user }}"
+    group: "{{ reprepro_user }}"
+    mode: '0755'
+
+- name: Create systemd credential from gpg passphrase
+  become: true
+  become_user: "{{ reprepro_user }}"
+  become_method: su
+  no_log: true
+  ansible.builtin.command:
+    cmd: "systemd-creds --user encrypt - {{ reprepro_basedir }}/gpg_passphrase.cred"
+    stdin: "{{ reprepro_gpg_passphrase }}"
+    creates: "{{ reprepro_basedir }}/gpg_passphrase.cred"
+
+- name: Create confdir
+  ansible.builtin.file:
+    path: "{{ reprepro_basedir }}/conf"
+    state: directory
+    owner: "{{ reprepro_user }}"
+    group: "{{ reprepro_user }}"
+    mode: '0755'
+
+- name: Create options file
+  ansible.builtin.copy:
+    content: "{{ reprepro_options }}"
+    dest: "{{ reprepro_basedir }}/conf/options"
+    owner: "{{ reprepro_user }}"
+    group: "{{ reprepro_user }}"
+    mode: '0644'
+  when: reprepro_options is defined
+
+- name: Create distributions file
+  ansible.builtin.copy:
+    content: "{{ reprepro_distributions }}"
+    dest: "{{ reprepro_basedir }}/conf/distributions"
+    owner: "{{ reprepro_user }}"
+    group: "{{ reprepro_user }}"
+    mode: '0644'
+  when: reprepro_distributions is defined
+
+- name: Create updates file
+  ansible.builtin.copy:
+    content: "{{ reprepro_updates }}"
+    dest: "{{ reprepro_basedir }}/conf/updates"
+    owner: "{{ reprepro_user }}"
+    group: "{{ reprepro_user }}"
+    mode: '0644'
+  when: reprepro_updates is defined
+
+- name: Create sign.sh
+  ansible.builtin.copy:
+    content: |
+      #!/bin/bash
+
+      set -e
+
+      ARGS=(--quiet --yes --default-key {{ reprepro_user }} --pinentry-mode loopback --passphrase "$(systemd-creds --user decrypt {{ reprepro_basedir }}/gpg_passphrase.cred -)" --sign)
+
+      gpg "${ARGS[@]}" --clear-sign --output "$2" "$1"
+      gpg "${ARGS[@]}" --detach-sign --output "$3" "$1"
+    dest: "{{ reprepro_basedir }}/conf/sign.sh"
+    owner: "{{ reprepro_user }}"
+    group: "{{ reprepro_user }}"
+    mode: '0700'
+    validate: shellcheck %s
+
+- name: Create outdir where /dists and /pool are located
+  ansible.builtin.file:
+    path: "{{ reprepro_outdir }}"
+    state: directory
+    owner: "{{ reprepro_user }}"
+    group: "{{ reprepro_user }}"
+    mode: '0755'
