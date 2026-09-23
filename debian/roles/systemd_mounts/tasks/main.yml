@@ -1,4 +1,0 @@
----
-- name: Include tasks to configure systemd mount units
-  ansible.builtin.include_tasks: mounts.yml
-  when: systemd_mounts is defined

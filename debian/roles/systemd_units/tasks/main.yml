@@ -1,0 +1,12 @@
+---
+- name: Include tasks to configure systemd mount units
+  ansible.builtin.include_tasks: mounts.yml
+  when: systemd_mounts is defined
+
+- name: Include tasks to configure systemd service units
+  ansible.builtin.include_tasks: services.yml
+  when: systemd_services is defined
+
+- name: Include tasks to configure systemd timer units
+  ansible.builtin.include_tasks: timers.yml
+  when: systemd_timers is defined

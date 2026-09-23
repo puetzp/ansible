@@ -1,0 +1,22 @@
+---
+- name: Create systemd mount units
+  ansible.builtin.copy:
+    content: "{{ item.value.content }}"
+    dest: "/etc/systemd/system/{{ item.key }}.mount"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ systemd_mounts | dict2items }}"
+
+- name: Enable systemd mount units
+  ansible.builtin.systemd_service:
+    name: "{{ item.key }}.mount"
+    daemon_reexec: "{{ item.value.daemon_reexec | default(omit) }}"
+    daemon_reload: "{{ item.value.daemon_reload | default(omit) }}"
+    enabled: "{{ item.value.enabled | default(omit) }}"
+    force: "{{ item.value.force | default(omit) }}"
+    masked: "{{ item.value.masked | default(omit) }}"
+    no_block: "{{ item.value.no_block | default(omit) }}"
+    scope: "{{ item.value.scope | default(omit) }}"
+    state: "{{ item.value.state | default(omit) }}"
+  loop: "{{ systemd_mounts | dict2items }}"
